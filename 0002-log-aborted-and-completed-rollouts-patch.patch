@@ -1,0 +1,70 @@
+From 536794ee6964c621360cdf941d3eba0f9b1bb0e3 Mon Sep 17 00:00:00 2001
+From: John Wood <jmw.home@gmail.com>
+Date: Wed, 30 Oct 2024 10:12:05 -0500
+Subject: [PATCH] Log aborted and completed rollouts
+
+---
+ 0002-log-aborted-rollouts-patch.patch | 25 +++++++++++++++++++++++++
+ utils/record/record.go                |  7 +++++++
+ 2 files changed, 32 insertions(+)
+ create mode 100644 0002-log-aborted-rollouts-patch.patch
+
+diff --git a/0002-log-aborted-rollouts-patch.patch b/0002-log-aborted-rollouts-patch.patch
+new file mode 100644
+index 000000000..027caf5dc
+--- /dev/null
++++ b/0002-log-aborted-rollouts-patch.patch
+@@ -0,0 +1,25 @@
++diff --git a/utils/record/record.go b/utils/record/record.go
++index 96be7c858..bdcc4f5a0 100644
++--- a/utils/record/record.go
+++++ b/utils/record/record.go
++@@ -13,6 +13,7 @@ import (
++ 	"time"
++ 
++ 	argoinformers "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/rollouts/v1alpha1"
+++	"github.com/argoproj/argo-rollouts/utils/conditions"
++ 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
++ 	"github.com/argoproj/notifications-engine/pkg/api"
++ 	"github.com/argoproj/notifications-engine/pkg/services"
++@@ -232,6 +233,12 @@ func (e *EventRecorderAdapter) defaultEventf(object runtime.Object, warn bool, o
++ 		kind, namespace, name := logutil.KindNamespaceName(logCtx)
++ 		if kind == "Rollout" {
++ 			e.RolloutEventCounter.WithLabelValues(namespace, name, opts.EventType, opts.EventReason).Inc()
+++			if opts.EventReason == conditions.RolloutCompletedReason {
+++				e.Recorder.Eventf(object, opts.EventType, opts.EventReason, "ROLLOUT_COMPLETED_LOG_COUNTER: %s", args...)
+++			}
+++			if opts.EventReason == conditions.RolloutAbortedReason {
+++				e.Recorder.Eventf(object, opts.EventType, opts.EventReason, "ROLLOUT_ABORTED_LOG_COUNTER: %s", args...)
+++			}
++ 		}
++ 
++ 		if e.apiFactory != nil {
+diff --git a/utils/record/record.go b/utils/record/record.go
+index 96be7c858..a82f98c79 100644
+--- a/utils/record/record.go
++++ b/utils/record/record.go
+@@ -13,6 +13,7 @@ import (
+ 	"time"
+ 
+ 	argoinformers "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/rollouts/v1alpha1"
++	"github.com/argoproj/argo-rollouts/utils/conditions"
+ 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
+ 	"github.com/argoproj/notifications-engine/pkg/api"
+ 	"github.com/argoproj/notifications-engine/pkg/services"
+@@ -232,6 +233,12 @@ func (e *EventRecorderAdapter) defaultEventf(object runtime.Object, warn bool, o
+ 		kind, namespace, name := logutil.KindNamespaceName(logCtx)
+ 		if kind == "Rollout" {
+ 			e.RolloutEventCounter.WithLabelValues(namespace, name, opts.EventType, opts.EventReason).Inc()
++			if opts.EventReason == conditions.RolloutCompletedReason {
++				logCtx.Infof("ROLLOUT_COMPLETED_LOG_COUNTER: %s", opts.EventReason)
++			}
++			if opts.EventReason == conditions.RolloutAbortedReason {
++				logCtx.Warningf("ROLLOUT_ABORTED_LOG_COUNTER: %s", opts.EventReason)
++			}
+ 		}
+ 
+ 		if e.apiFactory != nil {
+-- 
+2.44.0
+

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	argoinformers "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/rollouts/v1alpha1"
+	"github.com/argoproj/argo-rollouts/utils/conditions"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
 	"github.com/argoproj/notifications-engine/pkg/api"
 	"github.com/argoproj/notifications-engine/pkg/services"
@@ -232,6 +233,12 @@ func (e *EventRecorderAdapter) defaultEventf(object runtime.Object, warn bool, o
 		kind, namespace, name := logutil.KindNamespaceName(logCtx)
 		if kind == "Rollout" {
 			e.RolloutEventCounter.WithLabelValues(namespace, name, opts.EventType, opts.EventReason).Inc()
+			if opts.EventReason == conditions.RolloutCompletedReason {
+				logCtx.Infof("ROLLOUT_COMPLETED_LOG_COUNTER: %s", opts.EventReason)
+			}
+			if opts.EventReason == conditions.RolloutAbortedReason {
+				logCtx.Warningf("ROLLOUT_ABORTED_LOG_COUNTER: %s", opts.EventReason)
+			}
 		}
 
 		if e.apiFactory != nil {
